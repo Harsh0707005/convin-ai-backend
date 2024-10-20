@@ -113,7 +113,7 @@ app.post("/api/expense/add", (req, res) => {
 app.get("/api/expense/user", (req, res) => {
     const userId = req.query.userId;
 
-    checkUser(userId, (err, resCheckUser) => {
+    checkExistence(userId, "id", "users", (err, resCheckUser) => {
         if (err) {
             return res.status(500).json({ message: "Internal Server Error" });
         } else if (resCheckUser.length === 0) {
@@ -142,18 +142,81 @@ app.get("/api/expense/user", (req, res) => {
     });
 });
 
+app.get("/api/expense", (req, res)=>{
+    const expId = req.query.expId;
 
-function checkUser(userId, callback) {
-    const query = `SELECT * FROM users WHERE id = ?`;
-    db.all(query, [userId], (err, rows) => {
+    checkExistence(expId, "exp_id", "expense", (err, resCheckExpense)=>{
         if (err) {
-            console.log("Error: checkUser => db select " + err.message);
+            return res.status(500).json({ message: "Internal Server Error" });
+        } else if (resCheckExpense.length === 0) {
+            return res.status(400).json({ message: "Expense not found" });
+        }
+        
+        resCheckExpense[0].split = JSON.parse(resCheckExpense[0].split);
+
+        return res.status(200).send(resCheckExpense)
+    })
+
+})
+
+app.get("/api/expenses/overall", (req, res) => {
+    const userExpenses = {};
+
+    const query = `SELECT * FROM expense`;
+    
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.log("Error 500: /api/expenses/overall => db select " + err.message);
+            return res.status(500).json({ message: "Internal Server Error" });
+        }
+        
+        if (rows.length === 0) {
+            return res.status(200).json({ message: "No expenses found", data: {} });
+        }
+
+        rows.forEach((exp) => {
+            const splitAmounts = JSON.parse(exp.split); // Parse the split JSON field
+            
+            Object.keys(splitAmounts).forEach(userId => {
+                if (!userExpenses[userId]) {
+                    userExpenses[userId] = 0;  // Initialize if not already present
+                }
+                userExpenses[userId] += splitAmounts[userId]; // Add up the expenses
+            });
+        });
+
+        const userQuery = `SELECT id, name, email FROM users WHERE id IN (${Object.keys(userExpenses).join(",")})`;
+        
+        db.all(userQuery, [], (err, users) => {
+            if (err) {
+                console.log("Error 500: /api/expenses/overall => db select users " + err.message);
+                return res.status(500).json({ message: "Internal Server Error" });
+            }
+
+            const result = users.map(user => ({
+                userId: user.id,
+                name: user.name,
+                email: user.email,
+                totalOwed: userExpenses[user.id]
+            }));
+
+            return res.status(200).json({ message: "Overall expenses fetched successfully", data: result });
+        });
+    });
+});
+
+
+
+function checkExistence(id, column, table, callback) {
+    const query = `SELECT * FROM ${table} WHERE ${column} = ?`;
+    db.all(query, [id], (err, rows) => {
+        if (err) {
+            console.log("Error: checkExistence => db select " + err.message);
             return callback(err, null);
         }
         return callback(null, rows);
     });
 }
-
 
 app.listen(port, () => {
     console.log("Listening on 3000")
