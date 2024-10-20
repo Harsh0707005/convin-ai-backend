@@ -27,8 +27,10 @@ db.serialize(() => {
             exp_id INTEGER PRIMARY KEY AUTOINCREMENT,
             amount TEXT NOT NULL,
             purpose TEXT,
-            split INTEGER,
+            split TEXT,
+            option TEXT,
             created_by INTEGER,
+            created_at DATETIME,
             FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
         )`);
 })
@@ -68,23 +70,42 @@ app.get("/api/user", (req, res) => {
 })
 
 app.post("/api/expense/add", (req, res) => {
-    const { amount, purpose, split } = req.body;
+    const { amount, purpose, option, split } = req.body;
+    let participants = Object.keys(split)
+    const splitAmount = {}
 
-    const query = `INSERT INTO expense(amount, purpose, split) values(?,?, ?)`
+    if (option === "equal") {
+        participants.forEach((participant) => {
+            splitAmount[participant] = amount / participants.length;
+        })
+    } else if (option === "exact") {
+        if (Object.values(split).reduce((tempSum, item) => tempSum + item, 0) !== amount) {
+            return res.status(400).json({ message: "Sum of split amount doesn't match total amount!" })
+        }
 
-    db.run(query, [amount, purpose, JSON.stringify(split)], function (err) {
+        participants.forEach((participant) => {
+            splitAmount[participant] = split[participant]
+        })
+    } else if (option === "percentage") {
+        if (Object.values(split).reduce((tempSum, item) => tempSum + item, 0) !== 100) {
+            return res.status(400).json({ message: "Sum of split percentages is not equal to 100!" })
+        }
+        participants.forEach((participant) => {
+            splitAmount[participant] = (split[participant]/100)*amount;
+        })
+    } else {
+        return res.status(400).json({ message: "Unknown option" })
+    }
+    
+    const query = `INSERT INTO expense(amount, purpose, option, split, created_by, created_at) values(?, ?, ?, ?, ?, ?)`
+
+    db.run(query, [amount, purpose, option, JSON.stringify(splitAmount), "101", new Date().toISOString()], function (err) {
         if (err) {
             console.log("Error 500: /api/expense/add => db insert " + err.message);
             return res.status(500).json({ error: err.message })
         }
-        return res.status(201).json({ message: "expense added successfully", expId: this.lastID });
+        return res.status(201).json({ message: "Expense added successfully", expId: this.lastID });
     })
-})
-
-app.get("/api/s", (req, res)=>{
-    const s = req.query.s;
-
-    const query = `SELECT * FROM expense WHERE `
 })
 
 app.listen(port, () => {
