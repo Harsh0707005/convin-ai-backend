@@ -1,4 +1,4 @@
-### Installation & Setup
+### Installation & Setup:
 1. Clone the repository
    ```bash
    git clone https://github.com/Harsh0707005/convin-ai-backend
@@ -20,7 +20,7 @@
 <pre>https://app.swaggerhub.com/apis-docs/HARSHMASTER07705/Convin/1.0.0#/default/get_api_expenses_overall</pre>
 
 
-### Endpoints
+### Endpoints:
    ```bash
    1. /api/register/user -> Register user
    2. /api/user -> Retrieve user details
@@ -31,7 +31,7 @@
    7. /api/generate-balance-sheet -> Generate balance sheet
    ```
 
-### Example Images
+### Example Images:
 1. Register
    ![Register](/images/register.png)
 
