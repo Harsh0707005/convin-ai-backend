@@ -1,0 +1,1 @@
+https://app.swaggerhub.com/apis-docs/HARSHMASTER07705/Convin/1.0.0#/default/get_api_expenses_overall
