@@ -4,6 +4,7 @@ const sqlite = require('sqlite3').verbose();
 const fs = require('fs');
 const { jsPDF } = require('jspdf');
 require('jspdf-autotable');
+const path = require('path');
 
 if (!fs.existsSync("database.sqlite")) {
     fs.writeFile("database.sqlite", "", (err) => {
@@ -44,6 +45,8 @@ const port = 3000
 const app = express()
 
 app.use(express.json())
+
+app.use('/reports', express.static(path.join(__dirname, 'reports')));
 
 app.post("/api/register/user", (req, res) => {
     const { name, email, phone } = req.body;
@@ -298,14 +301,18 @@ app.get("/api/generate-balance-sheet", (req, res) => {
                 fs.mkdirSync('./reports');
             }
 
-            const pdfPath = `reports/expense_report_${new Date().toString()}.pdf`;
+            const pdfPath = `reports/expense_report_${Date.now()}.pdf`;
             doc.save(pdfPath);
-            res.download(pdfPath, (err) => {
-                if (err) {
-                    console.log("Error 500: /api/expenses/pdf => PDF download " + err.message);
-                    return res.status(500).json({ message: "Error generating PDF" });
-                }
-            });
+
+            // can be used when connected with frontend
+            // res.download(pdfPath, (err) => {
+            //     if (err) {
+            //         console.log("Error 500: /api/expenses/pdf => PDF download " + err.message);
+            //         return res.status(500).json({ message: "Error generating PDF" });
+            //     }
+            // });
+
+            res.status(200).json({ message: "PDF generated successfully", filePath: `http://127.0.0.1:${port}/${pdfPath}` });
         });
     });
 });
